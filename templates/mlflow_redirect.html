@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to MLflow UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding: 50px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0d6efd;
+            margin-bottom: 20px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            margin: 20px auto;
+            display: block;
+        }
+        .btn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Redirecting to MLflow Dashboard</h1>
+        <p>You will be automatically redirected to the MLflow UI to view experiment details, model metrics, and parameters.</p>
+        
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        
+        <p>If you are not redirected automatically, please click the button below:</p>
+        
+        <a href="http://localhost:5001" class="btn btn-primary" target="_blank">Open MLflow Dashboard</a>
+        
+        <hr>
+        
+        <div class="alert alert-info">
+            <h4>MLflow UI Information</h4>
+            <p>The MLflow UI allows you to:</p>
+            <ul class="text-start">
+                <li>Compare different models and their performance</li>
+                <li>View detailed metrics and parameters for each run</li>
+                <li>Track model lineage and versioning</li>
+                <li>Access model artifacts and download models</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Redirect after a short delay
+        setTimeout(function() {
+            window.location.href = "http://localhost:5001";
+        }, 3000);
+    </script>
+</body>
+</html> 

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latency Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            padding: 25px 0;
+            margin-bottom: 30px;
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 0 0 10px 10px;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        .prediction-result {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            background-color: #f1f8ff;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .param-group {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .param-title {
+            font-weight: bold;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            padding: 10px 20px;
+            font-weight: 500;
+        }
+        .alert {
+            margin-top: 20px;
+        }
+        .model-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-right: 5px;
+            font-size: 0.9rem;
+        }
+        .model-version {
+            background-color: #e3f2fd;
+        }
+        .model-stage-Production {
+            background-color: #d1e7dd;
+        }
+        .model-stage-Staging {
+            background-color: #fff3cd;
+        }
+        .model-stage-Archived {
+            background-color: #f8d7da;
+        }
+        .model-info-table {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Latency Prediction Dashboard</h1>
+            <p>Select parameters to predict latency in ms</p>
+            {% if current_stage %}
+            <div class="mt-2">
+                <span class="badge bg-info">Active Model: {{ current_stage }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if model_switch_result %}
+        <div class="alert {% if model_switch_result.success %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ model_switch_result.message }}
+        </div>
+        {% endif %}
+
+        {% if prediction %}
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Prediction Result</h4>
+                <div class="prediction-result">
+                    Predicted Latency: {{ prediction }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Model Selection Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Model Selection</h5>
+            </div>
+            <div class="card-body">
+                <form action="/switch_model" method="post" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="stage" class="form-label">Select Model Stage</label>
+                        <select class="form-select" id="stage" name="stage">
+                            <option value="Production">Production</option>
+                            <option value="Staging">Staging</option>
+                            <option value="None">None</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="version" class="form-label">Or Specific Version</label>
+                        <input type="number" class="form-control" id="version" name="version" placeholder="Optional">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Switch Model</button>
+                    </div>
+                </form>
+                
+                {% if available_models %}
+                <div class="mt-4">
+                    <h6>Available Model Versions</h6>
+                    <table class="table table-striped table-sm model-info-table">
+                        <thead>
+                            <tr>
+                                <th>Version</th>
+                                <th>Stage</th>
+                                <th>Run ID</th>
+                                <th>Created</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in available_models %}
+                            <tr>
+                                <td><span class="model-badge model-version">v{{ model.version }}</span></td>
+                                <td><span class="model-badge model-stage-{{ model.stage }}">{{ model.stage }}</span></td>
+                                <td><small>{{ model.run_id[:8] }}...</small></td>
+                                <td><small>{{ model.creation_time|int|timestamp_to_date }}</small></td>
+                                <td>
+                                    <form action="/switch_model" method="post" style="display:inline;">
+                                        <input type="hidden" name="version" value="{{ model.version }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Use</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Input Parameters</h4>
+                <form action="/direct_predict_form" method="post">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="param-group">
+                                <div class="param-title">Network Parameters</div>
+                                <div class="mb-3">
+                                    <label for="device" class="form-label">Device Type</label>
+                                    <select class="form-select" id="device" name="device" required>
+                                        {% for device in device_options %}
+                                        <option value="{{ device }}" {% if default_values.device == device %}selected{% endif %}>{{ device }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="PCell_RSRP_max" class="form-label">PCell RSRP Max (dBm)</label>
+                                    <input type="number" step="0.1" class="form-control" id="PCell_RSRP_max" name="PCell_RSRP_max" value="{{ default_values.PCell_RSRP_max }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="PCell_RSRQ_max" class="form-label">PCell RSRQ Max (dB)</label>
+                                    <input type="number" step="0.1" class="form-control" id="PCell_RSRQ_max" name="PCell_RSRQ_max" value="{{ default_values.PCell_RSRQ_max }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="PCell_RSSI_max" class="form-label">PCell RSSI Max (dBm)</label>
+                                    <input type="number" step="0.1" class="form-control" id="PCell_RSSI_max" name="PCell_RSSI_max" value="{{ default_values.PCell_RSSI_max }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="PCell_SNR_max" class="form-label">PCell SNR Max (dB)</label>
+                                    <input type="number" step="0.1" class="form-control" id="PCell_SNR_max" name="PCell_SNR_max" value="{{ default_values.PCell_SNR_max }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="PCell_Downlink_Average_MCS" class="form-label">PCell Downlink Average MCS</label>
+                                    <input type="number" step="0.1" class="form-control" id="PCell_Downlink_Average_MCS" name="PCell_Downlink_Average_MCS" value="{{ default_values.PCell_Downlink_Average_MCS }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="PCell_Downlink_bandwidth_MHz" class="form-label">PCell Downlink Bandwidth (MHz)</label>
+                                    <input type="number" step="0.1" class="form-control" id="PCell_Downlink_bandwidth_MHz" name="PCell_Downlink_bandwidth_MHz" value="{{ default_values.PCell_Downlink_bandwidth_MHz }}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="param-group">
+                                <div class="param-title">Environmental Parameters</div>
+                                <div class="mb-3">
+                                    <label for="area" class="form-label">Area Type</label>
+                                    <select class="form-select" id="area" name="area" required>
+                                        {% for area in area_options %}
+                                        <option value="{{ area }}" {% if default_values.area == area %}selected{% endif %}>{{ area }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="speed_kmh" class="form-label">Speed (km/h)</label>
+                                    <input type="number" step="0.1" class="form-control" id="speed_kmh" name="speed_kmh" value="{{ default_values.speed_kmh }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="temperature" class="form-label">Temperature (°C)</label>
+                                    <input type="number" step="0.1" class="form-control" id="temperature" name="temperature" value="{{ default_values.temperature }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="humidity" class="form-label">Humidity (0-1)</label>
+                                    <input type="number" step="0.01" min="0" max="1" class="form-control" id="humidity" name="humidity" value="{{ default_values.humidity }}" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">Predict Latency</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if input_data %}
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Input Data Summary</h4>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key, value in input_data.items() %}
+                            <tr>
+                                <td>{{ key }}</td>
+                                <td>{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <footer class="text-center py-4 text-muted">
+            <p>Elaborated by: Akrimi Imed & Jihed</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
