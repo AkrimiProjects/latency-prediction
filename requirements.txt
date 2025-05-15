@@ -1,0 +1,37 @@
+# Web Application
+Flask==2.2.3
+
+python-dotenv==1.0.0
+
+# Data Processing
+pandas==1.5.3
+numpy
+scikit-learn==1.2.2
+
+# Visualization
+matplotlib==3.7.1
+seaborn==0.12.2
+
+# MLOps
+mlflow==2.3.1
+
+
+# Monitoring
+prometheus-client
+prometheus-flask-exporter==0.22.3
+
+# Testing
+pytest==6.2.5
+pytest-cov==2.12.1
+pytest-mock==3.6.1
+
+# Code Quality
+black==21.7b0
+flake8==3.9.2
+mypy==0.910
+bandit==1.7.0
+safety==1.10.3
+
+# Utilities
+watchdog==3.0.0
+xgboost
